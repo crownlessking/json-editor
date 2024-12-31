@@ -42,3 +42,5 @@ next-env.d.ts
 
 DEV.md
 /app/next-demo
+requests.rest
+json-file-history.json
