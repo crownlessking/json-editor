@@ -4,9 +4,31 @@ import Link from 'next/link';
 import { Button } from '@mui/material';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
-import { Fragment } from "react";
 import { useState, useEffect } from 'react';
 import JsonDataForms, { IJsonDataProps } from '@/app/ui';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+
+const lightTheme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#1976d2',
+    },
+  },
+});
+
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#90caf9',
+    },
+    background: {
+      default: '#303030',
+      paper: '#424242',
+    },
+  },
+});
 
 export default function AppPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -65,7 +87,7 @@ export default function AppPage() {
   };
 
   return (
-    <Fragment>
+    <ThemeProvider theme={lightMode ? lightTheme : darkTheme}>
       <header className="bg-gray-300 text-white p-4 flex justify-between items-center bar">
         <div className="text-lg font-bold">
           <Link href="/">{ chosenFile }</Link>
@@ -120,11 +142,11 @@ export default function AppPage() {
           </nav>
         </aside>
         <main className="flex-1 p-4">
-          <div className="container mx-auto text-center">
+          <div className="container mx-auto">
             <JsonDataForms data={jsonData} />
           </div>
         </main>
       </div>
-    </Fragment>
+    </ThemeProvider>
   );
 }

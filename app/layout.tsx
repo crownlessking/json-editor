@@ -1,5 +1,6 @@
-import "@/app/globals.css";
+import '@/app/globals.css';
 import React from 'react';
+import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 
 export default function RootLayout({
   children,
@@ -10,7 +11,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <div className="flex flex-col h-screen">
-          { children }
+          <AppRouterCacheProvider>
+            { children }
+          </AppRouterCacheProvider>
         </div>
       </body>
     </html>

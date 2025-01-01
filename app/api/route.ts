@@ -1,7 +1,12 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 
-type TGeneralError = { code: string; };
+interface IError {
+  code: string;
+  message: string;
+  name: string;
+  stack: string;
+}
 
 interface IFileInfo {
   $path: string;
@@ -10,7 +15,7 @@ interface IFileInfo {
 }
 
 /**
- * Remembers the JSON file which were accessed.
+ * Keeps a list of JSON files which were accessed.
  *
  * @param $path 
  * @param name 
@@ -26,7 +31,7 @@ async function set_file_history($path: string, name: string) {
     const savedHistory = JSON.parse(historyData);
     history.push(...savedHistory);
   } catch (e) {
-    if ((e as TGeneralError).code !== 'ENOENT') {
+    if ((e as IError).code !== 'ENOENT') {
       throw e;
     }
   }
@@ -67,7 +72,7 @@ export async function POST(request: Request) {
       console.log('Filename: ', filename);
       set_file_history($path, file.name);
     } catch (e) {
-      if ((e as TGeneralError).code === 'ENOENT') {
+      if ((e as IError).code === 'ENOENT') {
         return new Response(JSON.stringify({
           editable: false,
           filename: '',
@@ -106,7 +111,7 @@ export async function POST(request: Request) {
 /**
  * Save uploaded file to the current directory.
  *
- * **NOTICE**: This function is an example and can be removed at any time.
+ * **NOTICE:** This function is an example and can be removed at any time.
  *
  * @param file 
  */
@@ -115,4 +120,40 @@ export async function save_file_to_current_directory(file: File) {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   await fs.writeFile(filePath, buffer);
+}
+
+/**
+ * API route to save/update the JSON file content.
+ *
+ * @param request 
+ * @returns 
+ */
+export async function PUT(request: Request) {
+  const data = await request.json();
+  const { filename, fileContent } = data;
+
+  if (!filename || !fileContent) {
+    return new Response(
+      JSON.stringify({
+        error: 'Filename or file content not provided'
+      }), { status: 400 }
+    );
+  }
+
+  try {
+    await fs.writeFile(filename, JSON.stringify(fileContent, null, 2));
+    return new Response(
+      JSON.stringify({
+        message: 'File saved successfully'
+      }), { status: 204 }
+    );
+  } catch (e) {
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to save file',
+        name: (e as IError).name,
+        stack: (e as IError).stack
+      }), { status: 500 }
+    );
+  }
 }
