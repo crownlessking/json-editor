@@ -1,18 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-
-interface IError {
-  code: string;
-  message: string;
-  name: string;
-  stack: string;
-}
-
-interface IFileInfo {
-  $path: string;
-  name: string;
-  missing: boolean;
-}
+import { IJsonapiError } from '../lib/IJsonapi';
+import { IError, IFileInfo } from '../lib/common.types';
 
 /**
  * Keeps a list of JSON files which were accessed.
@@ -58,52 +47,70 @@ async function set_file_history($path: string, name: string) {
 }
 
 export async function POST(request: Request) {
+  const error = {} as IJsonapiError;
   const data = await request.formData();
-  const $path = data.get('path') as string;
-  const file = data.get('file') as File;
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const $path = data.get('path') as string ?? '';
 
-  if (file && $path) {
+  // If $path is a valid file path then retrieve and return it.
+  // And editing is allowed.
+  try {
+    const stat = await fs.stat($path);
+    if (stat.isFile()) {
+      const fileContent = await fs.readFile($path, 'utf-8');
+      const fileName = path.basename($path);
+      const fileExtension = path.extname($path);
+      set_file_history($path, fileName + fileExtension);
+      return new Response(JSON.stringify({
+        editable: true,
+        filename: $path,
+        fileContent: JSON.parse(fileContent)
+      }), { status: 200 });
+    }
+  } catch (e) {
+    if ((e as IError).code === 'ENOENT') {
+      error.code = 'ENOENT';
+      error.title = 'Provided path does not exist';
+      error.status = '404';
+    } else {
+      // throw e;
+      error.title = (e as IError).message;
+      error.detail = (e as IError).stack;
+    }
+  }
+
+  const file = data.get('file') as File;
+
+  // If file is located in the directory indicated by $path, editing is allowed.
+  if (file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
     const filename = path.join($path, file.name);
 
     try {
       await fs.access(filename);
-      console.log('Filename: ', filename);
       set_file_history($path, file.name);
+      return new Response(JSON.stringify({
+        editable: true,
+        filename,
+        fileContent: JSON.parse(buffer.toString('utf-8')),
+        error: [ error ]
+      }), { status: 200 });
     } catch (e) {
       if ((e as IError).code === 'ENOENT') {
         return new Response(JSON.stringify({
           editable: false,
           filename: '',
-          fileContent: JSON.parse(buffer.toString('utf-8'))
+          fileContent: JSON.parse(buffer.toString('utf-8')),
+          error: [ {
+            code: 'ENOENT',
+            title: (e as IError).message,
+            detail: (e as IError).stack
+          } as IJsonapiError ]
         }), { status: 404 });
       } else {
         throw e;
       }
     }
-
-    return new Response(JSON.stringify({
-      editable: true,
-      filename,
-      fileContent: JSON.parse(buffer.toString('utf-8'))
-    }), { status: 200 });
-
-  } else if (file && !$path) {
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    return new Response(JSON.stringify({
-      editable: false,
-      filename: '',
-      fileContent: JSON.parse(buffer.toString('utf-8'))
-    }), { status: 200 });
-
-  } else {
-    return new Response(
-      JSON.stringify({
-        error: 'No file or path provided'
-      }), { status: 400 }
-    );
   }
 
 }
@@ -142,11 +149,7 @@ export async function PUT(request: Request) {
 
   try {
     await fs.writeFile(filename, JSON.stringify(fileContent, null, 2));
-    return new Response(
-      JSON.stringify({
-        message: 'File saved successfully'
-      }), { status: 204 }
-    );
+    return new Response(null, { status: 204 });
   } catch (e) {
     return new Response(
       JSON.stringify({

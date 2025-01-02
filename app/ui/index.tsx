@@ -1,4 +1,4 @@
-import { JSX, useState } from 'react';
+import { JSX, useRef, useState } from 'react';
 import TextField from '@mui/material/TextField';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
@@ -17,9 +17,12 @@ interface IProps {
   data: IJsonDataProps
 }
 
-interface IFieldProps {
+interface IFormBuilderProps {
   data: IJsonDataProps;
   obj: IJsonData;
+}
+
+interface IFieldProps extends IFormBuilderProps {
   prop: string;
   index: number
 }
@@ -58,7 +61,7 @@ const convertToId = (prop: string) => {
  * @returns 
  */
 const bgStyle = (odd = 1) => {
-  return odd % 2 === 0 ? 'js-card' : '';
+  return odd % 2 === 0 ? ' js-card' : '';
 }
 
 /**
@@ -75,10 +78,10 @@ const saveJSON = (fileContent: IJsonData, filename: string) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ fileContent, filename }),
-    })
-      .then(response => response.json())
-      .then(data => console.log('Success:', data))
-      .catch(error => console.error('Error:', error));
+    }) // DEBUG: Uncomment the following to debug
+      // .then(response => response.json())
+      // .then(data => console.log('Success:', data))
+      // .catch(error => console.error('Error:', error));
   }, 100);
 }
 
@@ -97,20 +100,18 @@ const EditBoolean = ({ data, obj, prop, index: i }: IFieldProps) => {
   }
 
   return (
-    <div className="w-full">
-
-        <FormControlLabel
-          id={id}
-          control={
-            <Switch
-              disabled={!data.editable}
-              checked={value}
-              onChange={handleChange}
-            />
-          }
-          label={formatLabel(prop)}
-        />
-
+    <div className='w-full'>
+      <FormControlLabel
+        id={id}
+        control={
+          <Switch
+            disabled={!data.editable}
+            checked={value}
+            onChange={handleChange}
+          />
+        }
+        label={formatLabel(prop)}
+      />
     </div>
   );
 }
@@ -119,67 +120,87 @@ const EditBoolean = ({ data, obj, prop, index: i }: IFieldProps) => {
  * Field to edit a JSON string property.
  */
 const EditString = ({ data, obj, prop, index: i }: IFieldProps) => {
-  const [value, setValue] = useState(obj[prop] as string);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const value = obj[prop];
   const id = `${convertToId(prop)}-${i}`;
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    setValue(e.target.value);
     obj[prop] = e.target.value;
     const { filename, fileContent } = data;
     saveJSON(fileContent, filename);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && inputRef.current) {
+      const newValue =  inputRef.current.value;
+      console.log('e.currentTarget.value =', newValue);
+      obj[prop] = newValue;
+      const { filename, fileContent } = data;
+      saveJSON(fileContent, filename);
+    }
+  };
+
   return (
-
-        <TextField
-          id={id}
-          label={formatLabel(prop)}
-          variant="standard"
-          type="text"
-          value={value}
-          onBlur={handleBlur}
-          disabled={!data.editable}
-          fullWidth
-        />
-
+    <TextField
+      id={id}
+      label={formatLabel(prop)}
+      variant='standard'
+      type='text'
+      defaultValue={value}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      inputRef={inputRef}
+      disabled={!data.editable}
+      fullWidth
+    />
   );
 };
 
 const EditNumber = ({ data, obj, prop, index: i }: IFieldProps) => {
-  const [value, setValue] = useState(obj[prop] as number);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const value = obj[prop];
   const id = `${convertToId(prop)}-${i}`;
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const newValue = parseFloat(e.target.value);
-    setValue(newValue);
     obj[prop] = newValue;
     const { filename, fileContent } = data;
     saveJSON(fileContent, filename);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && inputRef.current) {
+      const newValue = parseFloat(inputRef.current.value);
+      obj[prop] = newValue;
+      const { filename, fileContent } = data;
+      // e.currentTarget.blur();
+      saveJSON(fileContent, filename);
+    }
+  };
+
   return (
-
-      <TextField
-        id={id}
-        label={formatLabel(prop)}
-        variant="standard"
-        type="number"
-        value={value}
-        onBlur={handleBlur}
-        disabled={!data.editable}
-        fullWidth
-      />
-
+    <TextField
+      id={id}
+      label={formatLabel(prop)}
+      variant='standard'
+      type='number'
+      defaultValue={value}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      inputRef={inputRef}
+      disabled={!data.editable}
+      fullWidth
+    />
   );
 };
 
-const FormBuilder = ({ data, obj, prop: formName }: IFieldProps) => {
+const FormBuilder = ({ data, obj }: IFormBuilderProps) => {
   const stack: IJsonData[] = [];
   const propStack: string[] = [];
   const fieldList: ( JSX.Element | null )[] = [];
   let i = 0;
   stack.push(obj);
-  propStack.push(formName);
+  // propStack.push(formName);
 
   do {
     const formName = propStack.shift() ?? '';
@@ -187,55 +208,33 @@ const FormBuilder = ({ data, obj, prop: formName }: IFieldProps) => {
 
     if (stackedObj) {
       const subFieldList: (JSX.Element | null)[] = Object.keys(stackedObj).map((key) => {
-        const value = stackedObj[key];console.log(`stackedObj[${key}] =`, value);
+        const value = stackedObj[key];
         switch (typeof value) {
           case 'boolean':
             return (
               <EditBoolean
                 index={i}
-                key={key}
+                key={`${key}-${i}`}
                 data={data}
                 obj={stackedObj}
                 prop={key}
               />
             );
           case 'string':
-            if (value === 'true' || 'false' === value) {
-              return (
-                <EditBoolean
-                  index={i}
-                  key={key}
-                  data={data}
-                  obj={stackedObj}
-                  prop={key}
-                />
-              );
-            } else if (!isNaN(Number(value))) {
-              return (
-                <EditNumber
-                  index={i}
-                  key={key}
-                  data={data}
-                  obj={stackedObj}
-                  prop={key}
-                />
-              );
-            } else {
-              return (
-                <EditString
-                  index={i}
-                  key={key}
-                  data={data}
-                  obj={stackedObj}
-                  prop={key}
-                />
-              );
-            }
+            return (
+              <EditString
+                index={i}
+                key={`${key}-${i}`}
+                data={data}
+                obj={stackedObj}
+                prop={key}
+              />
+            );
           case 'number':
             return (
               <EditNumber
                 index={i}
-                key={key}
+                key={`${key}-${i}`}
                 data={data}
                 obj={stackedObj}
                 prop={key}
@@ -253,9 +252,9 @@ const FormBuilder = ({ data, obj, prop: formName }: IFieldProps) => {
       });
       fieldList.push(
         <div key={formName}
-          className={`p-3 col-span-1 ${bgStyle(i)}`}
+          className={`p-3 col-span-1${bgStyle(i)}`}
         >
-          <h2 className='text-center'>{ formatLabel(formName) }</h2>
+          <h2 className='text-center font-bold'>{ formatLabel(formName) }</h2>
           { subFieldList }
         </div>
       );
@@ -269,12 +268,9 @@ const FormBuilder = ({ data, obj, prop: formName }: IFieldProps) => {
 
 export default function JsonDataForms({ data }: IProps) {
   if (Object.keys(data.fileContent).length > 0) {
-    const lastSlashIndex = data.filename.lastIndexOf('/');
-    const prop = formatLabel(data.filename.substring(lastSlashIndex + 1));
-    console.log('data =', data);
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <FormBuilder index={0} data={data} obj={data.fileContent} prop={prop} />
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+        <FormBuilder data={data} obj={data.fileContent} />
       </div>
     );
   }

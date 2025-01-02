@@ -4,16 +4,21 @@ import Link from 'next/link';
 import { Button } from '@mui/material';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
+import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import { useState, useEffect } from 'react';
 import JsonDataForms, { IJsonDataProps } from '@/app/ui';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { IFileInfo } from './lib/common.types';
 
 const lightTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1976d2',
+      main:  '#ef3114', //'#1976d2',
     },
+  },
+  typography: {
+    fontFamily: 'var(--font-kanit)',
   },
 });
 
@@ -28,18 +33,24 @@ const darkTheme = createTheme({
       paper: '#424242',
     },
   },
+  typography: {
+    fontFamily: 'var(--font-kanit)',
+  },
 });
 
+const EMPTY_JSON_DATA: IJsonDataProps = {
+  editable: false,
+  filename: '',
+  fileContent: {}
+};
+
 export default function AppPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [lightMode, setLightMode] = useState(false);
-  const [ chosenFile, setChosenFile ] = useState('File.json');
+  const [ sidebarOpen, setSidebarOpen ] = useState(false);
+  const [ lightMode, setLightMode ] = useState(false);
+  const [ chosenFile, setChosenFile ] = useState('Editor.json');
   const [ filePath, setFilePath ] = useState('');
-  const [ jsonData, setJsonData ] = useState<IJsonDataProps>({
-    editable: false,
-    filename: '',
-    fileContent: {}
-  });
+  const [ jsonData, setJsonData ] = useState<IJsonDataProps>(EMPTY_JSON_DATA);
+  const [ fileHistory, setFileHistory ] = useState([] as IFileInfo[]);
 
   useEffect(() => {
     if (lightMode) {
@@ -49,6 +60,20 @@ export default function AppPage() {
     }
   }, [ lightMode ]);
 
+  useEffect(() => {
+    fetch('/api/file-history', {
+      method: 'GET'
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('File history retrieved successfully:', data);
+        setTimeout(() => setFileHistory(data), 500);
+      })
+      .catch(error => {
+        console.error('Error retrieving file history', error);
+      });
+  }, [ setFileHistory ]);
+
   const toggleDarkMode = () => {
     setLightMode(!lightMode);
   };
@@ -57,7 +82,29 @@ export default function AppPage() {
     setFilePath(e.target.value);
   };
 
-  const handleFileInput = (/*e: React.MouseEvent<HTMLButtonElement>*/) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const formData = new FormData();
+      formData.append('path', filePath);
+      const fileName = filePath.split('\\').pop()?.split('/').pop() || '';
+      setChosenFile(fileName);
+
+      fetch('/api', {
+        method: 'POST',
+        body: formData,
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Path sent successfully:', data);
+          setJsonData(data);
+        })
+        .catch(error => {
+          console.error('Error sending path:', error);
+        });
+    }
+  }
+
+  const handleFileInput = () => {
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
     if (fileInput) {
       fileInput.click();
@@ -86,6 +133,18 @@ export default function AppPage() {
     }
   };
 
+  /**
+   * @param file 
+   * @returns 
+   */
+  const handleHistoryClick = (file: IFileInfo) => (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
+    console.log('file info =', file);
+    console.log(e.detail);
+
+    // [TODO] Load JSON data by setting the chosenFile and filePath with
+    //        values found in history item.
+  }
+
   return (
     <ThemeProvider theme={lightMode ? lightTheme : darkTheme}>
       <header className="bg-gray-300 text-white p-4 flex justify-between items-center bar">
@@ -97,9 +156,10 @@ export default function AppPage() {
             <input
               type="text"
               placeholder="Type in file path..."
-              className="rounded-l pl-5 h-10 w-full bg-gray-800 file"
+              className="font-mono text-sm tracking-tight font-bold rounded-l pl-5 h-10 w-full bg-gray-800 file"
               onChange={handlePathInput}
               value={filePath}
+              onKeyDown={handleKeyDown}
             />
             <button
               type="button"
@@ -125,6 +185,7 @@ export default function AppPage() {
             className="p-2 rounded bg-gray-800 text-white"
           />
           <button
+            type='button'
             className="block md:hidden"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
@@ -136,9 +197,25 @@ export default function AppPage() {
         <aside className={`bg-gray-300 text-white p-4 md:block ${sidebarOpen ? 'block' : 'hidden'} w-64 bar`}>
           <div className="text-center font-bold">File history</div>
           <nav>
-            <Link href="/" className="block py-2">json-file 1</Link>
-            <Link href="/about" className="block py-2">json-file 2</Link>
-            <Link href="/contact" className="block py-2">json-file 3</Link>
+            {fileHistory.map((file, index) => (
+              <div key={index} className='block group hover:bg-gray-400 p-1 rounded transition-colors duration-200 relative'>
+                <button
+                  className="absolute right-1 top-1 rounded hidden group-hover:block"
+                  onClick={() => {
+                    const updatedHistory = fileHistory.filter((_, i) => i !== index);
+                    setFileHistory(updatedHistory);
+                    // [TODO] Save fileHistory to server.
+                  }}
+                  type='button'
+                  title='delete'
+                >
+                  <HighlightOffIcon color={lightMode ? 'warning' : 'info'} />
+                </button>
+                <Link onClick={handleHistoryClick(file)} href="#" className="hover:underline">
+                  { index + 1 }. { file.name }
+                </Link>
+              </div>
+            ))}
           </nav>
         </aside>
         <main className="flex-1 p-4">

@@ -8,7 +8,7 @@
 
   --bar-background: rgb(209, 213, 219);
   --js-card-background: rgb(229, 231, 235);
-  --file-background: #fff;
+  --file-background: rgb(249, 250, 251);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,10 +22,12 @@
   }
 }
 
+/* font-family: Arial, Helvetica, sans-serif; */
+
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-kanit);
 }
 
 body.light {
@@ -56,7 +58,7 @@ body.dark .bar {
 }
 
 body.light .file {
-  --file-background: #fff;
+  --file-background: rgb(249, 250, 251);
 }
 
 body.dark .file {
