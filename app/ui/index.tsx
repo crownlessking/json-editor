@@ -2,16 +2,7 @@ import { JSX, useRef, useState } from 'react';
 import TextField from '@mui/material/TextField';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
-
-interface IJsonData {
-  [prop: string]: string | number | boolean | IJsonData;
-}
-
-export interface IJsonDataProps {
-  editable: boolean;
-  filename: string;
-  fileContent: IJsonData;
-}
+import { IJsonData, IJsonDataProps } from '../lib/common.types';
 
 interface IProps {
   data: IJsonDataProps
@@ -64,20 +55,15 @@ const bgStyle = (odd = 1) => {
   return odd % 2 === 0 ? ' js-card' : '';
 }
 
-/**
- * Save changes to JSON file.
- *
- * @param fileContent 
- * @param filename 
- */
-const saveJSON = (fileContent: IJsonData, filename: string) => {
+/** Save changes to JSON file. */
+const saveJSON = (fileData: IJsonData, filename: string) => {
   setTimeout(() => {
     fetch('/api', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ fileContent, filename }),
+      body: JSON.stringify({ fileData, filename }),
     }) // DEBUG: Uncomment the following to debug
       // .then(response => response.json())
       // .then(data => console.log('Success:', data))
@@ -95,8 +81,8 @@ const EditBoolean = ({ data, obj, prop, index: i }: IFieldProps) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       setValue(e.target.checked);
       obj[prop] = e.target.checked;
-      const { filename, fileContent } = data;
-      saveJSON(fileContent, filename);
+      const { filename, fileData } = data;
+      saveJSON(fileData, filename);
   }
 
   return (
@@ -126,17 +112,16 @@ const EditString = ({ data, obj, prop, index: i }: IFieldProps) => {
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     obj[prop] = e.target.value;
-    const { filename, fileContent } = data;
-    saveJSON(fileContent, filename);
+    const { filename, fileData } = data;
+    saveJSON(fileData, filename);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && inputRef.current) {
       const newValue =  inputRef.current.value;
-      console.log('e.currentTarget.value =', newValue);
       obj[prop] = newValue;
-      const { filename, fileContent } = data;
-      saveJSON(fileContent, filename);
+      const { filename, fileData } = data;
+      saveJSON(fileData, filename);
     }
   };
 
@@ -164,17 +149,16 @@ const EditNumber = ({ data, obj, prop, index: i }: IFieldProps) => {
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const newValue = parseFloat(e.target.value);
     obj[prop] = newValue;
-    const { filename, fileContent } = data;
-    saveJSON(fileContent, filename);
+    const { filename, fileData } = data;
+    saveJSON(fileData, filename);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && inputRef.current) {
       const newValue = parseFloat(inputRef.current.value);
       obj[prop] = newValue;
-      const { filename, fileContent } = data;
-      // e.currentTarget.blur();
-      saveJSON(fileContent, filename);
+      const { filename, fileData } = data;
+      saveJSON(fileData, filename);
     }
   };
 
@@ -199,8 +183,8 @@ const FormBuilder = ({ data, obj }: IFormBuilderProps) => {
   const propStack: string[] = [];
   const fieldList: ( JSX.Element | null )[] = [];
   let i = 0;
+  let j = 0;
   stack.push(obj);
-  // propStack.push(formName);
 
   do {
     const formName = propStack.shift() ?? '';
@@ -214,7 +198,7 @@ const FormBuilder = ({ data, obj }: IFormBuilderProps) => {
             return (
               <EditBoolean
                 index={i}
-                key={`${key}-${i}`}
+                key={`${key}-${j++}`}
                 data={data}
                 obj={stackedObj}
                 prop={key}
@@ -224,7 +208,7 @@ const FormBuilder = ({ data, obj }: IFormBuilderProps) => {
             return (
               <EditString
                 index={i}
-                key={`${key}-${i}`}
+                key={`${key}-${j++}`}
                 data={data}
                 obj={stackedObj}
                 prop={key}
@@ -234,14 +218,14 @@ const FormBuilder = ({ data, obj }: IFormBuilderProps) => {
             return (
               <EditNumber
                 index={i}
-                key={`${key}-${i}`}
+                key={`${key}-${j++}`}
                 data={data}
                 obj={stackedObj}
                 prop={key}
               />
             );
           case 'object':
-            if (value !== null && !Array.isArray(value)) {
+            if (value !== null /*&& !Array.isArray(value)*/) {
               stack.push(value);
               propStack.push(key);
             }
@@ -250,14 +234,20 @@ const FormBuilder = ({ data, obj }: IFormBuilderProps) => {
         }
         return null;
       });
-      fieldList.push(
-        <div key={formName}
-          className={`p-3 col-span-1${bgStyle(i)}`}
-        >
-          <h2 className='text-center font-bold'>{ formatLabel(formName) }</h2>
-          { subFieldList }
-        </div>
-      );
+
+      // Filter out null values from subFieldList
+      const filteredSubFieldList = subFieldList.filter(item => item !== null);
+
+      if (filteredSubFieldList.length > 0) {
+        fieldList.push(
+          <div key={`${formName}-${j++}`}
+            className={`p-3 col-span-1${bgStyle(i)}`}
+          >
+            <h2 className='text-center font-bold'>{ formatLabel(formName) }</h2>
+            { subFieldList }
+          </div>
+        );
+      }
     }
 
     i++;
@@ -267,10 +257,10 @@ const FormBuilder = ({ data, obj }: IFormBuilderProps) => {
 }
 
 export default function JsonDataForms({ data }: IProps) {
-  if (Object.keys(data.fileContent).length > 0) {
+  if (Object.keys(data.fileData).length > 0) {
     return (
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-        <FormBuilder data={data} obj={data.fileContent} />
+        <FormBuilder data={data} obj={data.fileData} />
       </div>
     );
   }

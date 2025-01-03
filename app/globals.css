@@ -9,6 +9,8 @@
   --bar-background: rgb(209, 213, 219);
   --js-card-background: rgb(229, 231, 235);
   --file-background: rgb(249, 250, 251);
+  --history-bg-hover: rgb(195, 199, 207);
+  --missing-file-fg: rgb(107, 114, 128);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,6 +21,8 @@
     --bar-background: rgb(31, 41, 55);
     --js-card-background: rgb(31, 41, 55);
     --file-background: rgb(75, 85, 99);
+    --history-bg-hover: rgb(55, 65, 81);
+    --missing-file-fg: rgb(107, 114, 128);
   }
 }
 
@@ -75,4 +79,24 @@ body.light .js-card {
 
 body.dark .js-card {
   --bar-background: rgb(31, 41, 55);
+}
+
+body.light .history {
+  --history-bg-hover: rgb(195, 199, 207);
+}
+
+body.dark .history {
+  --history-bg-hover: rgb(55, 65, 81);
+}
+
+.missing-file {
+  color: var(--missing-file-fg);
+}
+
+body.light .missing-file {
+  --missing-file-fg: rgb(107, 114, 128);
+}
+
+body.dark .missing-file {
+  --missing-file-fg: rgb(75, 85, 99);
 }

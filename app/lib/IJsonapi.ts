@@ -40,7 +40,7 @@ export interface IJsonapiMember {
  * ```
  * @see https://jsonapi.org/format/#document-meta
  */
-export type TJsonapiMeta = Record<string, Record<string, string>>;
+export type TJsonapiMeta = Record<string, Record<string, string> | string>;
 
 /**
  * @see https://jsonapi.org/format/#document-links
