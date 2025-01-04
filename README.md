@@ -1,6 +1,6 @@
 # JSON Editor
 
-This is a Next.js app that allows you to edit your JSON files using a web interface. It's a web page that is ran on your local computer and not on the internet.
+This is a [Next.js](https://nextjs.org/) app that allows you to edit your JSON files using a web interface. It's a web page that is ran on your local computer and not on the internet.
 
 ## Requirements
 
@@ -22,6 +22,12 @@ npm start
 ```
 
 Whenever you need to using it. The terminal will indicate which URL address to use to access the app.
+
+## Editing a JSON file
+
+The file will **not** be editable if you do not specify the path to the parent folder in the text field.
+
+To open a JSON file for editing, you **must** specify the path of the folder where the file is located before choosing to open it using the button. Alternatively, you can enter the full path of the file and it will be opened for editing immediately.
 
 ## WARNING!
 
