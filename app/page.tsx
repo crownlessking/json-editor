@@ -295,7 +295,7 @@ export default function AppPage() {
                 </button>
                 <Link onClick={handleHistoryClick(file)} href="#">
                   <span className={file.missing ? 'ml-2 line-through missing-file' : 'ml-2'}>
-                    { index + 1 }. { file.name }
+                    { index + 1 }. { file.alias || file.name.replace(/\.[^/.]+$/, "") }
                   </span>
                 </Link>
               </div>

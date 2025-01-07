@@ -44,3 +44,5 @@ DEV.md
 /app/next-demo
 requests.rest
 json-file-history.json
+editor.config.json
+/public/Demo-pics

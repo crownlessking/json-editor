@@ -6,7 +6,8 @@ export interface IFileInfo {
   $path: string;
   name: string;
   filename?: string;
-  missing: boolean;
+  alias?: string;
+  missing?: boolean;
 }
 
 export interface IError {
@@ -32,3 +33,13 @@ export interface IJsonDataProps {
 
 /** JSON data response. Alias for JSON data props */
 export type TJsonResponse = IJsonDataProps;
+
+/** App config */
+export interface IAppConfig {
+  historyLimit: number;
+  pathAliases: Record<string, {
+    level?: number;
+    regex?: string;
+  }>;
+  aliases: Record<string, string>
+}
