@@ -42,7 +42,7 @@ try {
   await fs.access(configPath);
 } catch (error) {
   console.log((error as IError).message);
-  console.log('Creating configuration file.');
+  console.log('[NOTICE] Created configuration file.');
   await fs.writeFile(configPath, JSON.stringify(DEFAULT_CONFIG, null, 2));
 }
 
@@ -65,7 +65,7 @@ export function apply_file_history_config(fileInfo: IFileInfo): IFileInfo {
       regex: '',
       ...appConfig.pathAliases[name]
     };
-    const { level, regex } = pathAlias;console.log('regex:', regex);
+    const { level, regex } = pathAlias;
     const directories = fileInfo.$path.split(/\\|\//g);
     if (directories.length >= 2) {
       const directoryName = directories[directories.length - level];
